@@ -1,0 +1,40 @@
+.navbar {
+  margin: 0;
+  padding-left: 15px;
+}
+
+.title {
+  padding-top: 250px;
+  justify-content: center;
+  text-align: center;
+  display: flex;
+}
+
+.title-text {
+  font-size: 45px;
+}
+
+/*
+* Styles Pages CSS
+*/
+
+.pages-container {
+  padding-left: 40px;
+  padding-top: 50px;
+}
+
+.pages-text {
+  padding-bottom: 30px;
+}
+
+.first-div {
+  border: 2px solid #333;
+  border-radius: 20px;
+}
+
+/* Choose */
+
+.custom-navbar {
+  background-color: #8c8a80;
+  border-radius: 10px;
+}
