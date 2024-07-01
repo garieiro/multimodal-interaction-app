@@ -13,7 +13,7 @@ import ExperiencePage from './components/staticData/ExperiencePage'
 
 function App() {
   return (
-    <Suspense fallback={<h1>Aguarda um pouco sff </h1>}>
+    <Suspense fallback={<h1>Aguarda um pouco </h1>}>
       <Router>
         <div className="app-container">
           <NavBar />
