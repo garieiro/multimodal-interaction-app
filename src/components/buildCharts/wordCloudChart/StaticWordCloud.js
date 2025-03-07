@@ -1,33 +1,14 @@
-import React, { useEffect, useState } from 'react'
-import { fetchStaticCountWordsFromAPI } from '../../../api/StaticData'
+import React from 'react'
+import transformDataToWordcloud from '../../../TransformDate/transformDataToWordcloud'
 import WordCloud from '../../charts/WordCloud'
 
 const StaticWordCloud = ({ data }) => {
-  const [wordCloudData, setWordCloudData] = useState([])
-  const [dataLoaded, setDataLoaded] = useState(false)
+  const transformedData = React.useMemo(
+    () => transformDataToWordcloud(data),
+    [data]
+  )
 
-  useEffect(() => {
-    const fetchWordCloud = async () => {
-      try {
-        let fetchedWordCloudData = []
-        if (data) {
-          fetchedWordCloudData = data
-        } else {
-          fetchedWordCloudData = await fetchStaticCountWordsFromAPI()
-        }
-        setWordCloudData(fetchedWordCloudData)
-        setDataLoaded(true)
-      } catch (error) {
-        console.error('Error fetching WordCloud data:', error)
-      }
-    }
-
-    fetchWordCloud().catch((error) =>
-      console.error('Error fetching WordCloud data:', error)
-    )
-  }, [data])
-
-  return dataLoaded && <WordCloud data={wordCloudData} />
+  return <WordCloud data={transformedData} />
 }
 
 export default StaticWordCloud

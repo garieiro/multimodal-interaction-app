@@ -13,21 +13,18 @@ const BarChart = ({ data }) => {
     const marginLeft = 40
     const barPadding = 0.1
 
-    // Cria a escala com a largura das barras dinâmica
     const x = d3
       .scaleBand()
       .domain(data.map((d) => d.type))
       .range([marginLeft, width - marginRight])
       .padding(barPadding)
 
-    // Cria a escala linear para o eixo y
     const y = d3
       .scaleLinear()
       .domain([0, d3.max(data, (d) => d.count)])
       .nice()
       .range([height - marginBottom, marginTop])
 
-    // Seleciona o elemento SVG e define seus atributos
     const svg = d3
       .select(svgRef.current)
       .attr('width', width)
@@ -35,7 +32,6 @@ const BarChart = ({ data }) => {
       .attr('viewBox', [0, 0, width, height])
       .attr('style', 'max-width: 100%; height: auto;')
 
-    // Adiciona as barras ao gráfico
     svg
       .selectAll('rect')
       .data(data)
@@ -47,7 +43,6 @@ const BarChart = ({ data }) => {
       .attr('height', (d) => height - marginBottom - y(d.count))
       .attr('fill', 'steelblue')
 
-    // Adiciona o eixo x ao gráfico
     svg
       .append('g')
       .attr('transform', `translate(0,${height - marginBottom})`)
@@ -61,7 +56,6 @@ const BarChart = ({ data }) => {
           .style('text-anchor', 'middle')
       )
 
-    // Adiciona o eixo y ao gráfico
     svg
       .append('g')
       .attr('transform', `translate(${marginLeft},0)`)

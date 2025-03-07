@@ -2,24 +2,27 @@ import React, { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
 
 const PieChart = ({ data }) => {
+  const chartRef = useRef()
+  const tooltipRef = useRef()
+
   useEffect(() => {
-    drawChart()
-  }, [])
+    d3.select(chartRef.current).selectAll('*').remove()
 
-  const drawChart = () => {
-    d3.select('#chart-container').selectAll('*').remove()
-
-    const width = 400
-    const height = 400
-    const radius = Math.min(width, height) / 2 - 50
+    if (!data || data.length === 0) {
+      return <div>No data available</div>
+    }
+    const width = 928
+    const height = width
+    const radius = width / 3
 
     const color = d3.scaleOrdinal(d3.schemeCategory10)
 
     const svg = d3
-      .select('#chart-container')
+      .select(chartRef.current)
       .append('svg')
-      .attr('width', width)
-      .attr('height', height)
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .style('display', 'block')
+      .style('margin', 'auto')
       .append('g')
       .attr('transform', `translate(${width / 2},${height / 2})`)
 
@@ -36,6 +39,18 @@ const PieChart = ({ data }) => {
       .innerRadius((d) => d.y0)
       .outerRadius((d) => d.y1)
 
+    const tooltip = d3
+      .select(tooltipRef.current)
+      .style('opacity', 0)
+      .style('position', 'absolute')
+      .style('pointer-events', 'none')
+      .style('background', 'rgba(0,0,0,0.9)')
+      .style('border', '1px solid black')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('font-size', '12px')
+      .style('z-index', '10')
+
     svg
       .selectAll('path')
       .data(root.descendants().slice(1))
@@ -44,84 +59,50 @@ const PieChart = ({ data }) => {
       .attr('d', arc)
       .style('stroke', '#fff')
       .style('fill', (d) => color(d.data.name))
-      .append('title')
-      .text((d) => {
+      .on('mouseover', function (event, d) {
         let tooltipText = ''
         if (d.depth === 1) {
           if (d.data.type) {
-            tooltipText += `Type: ${d.data.type}\n`
+            tooltipText += `Type: ${d.data.type}<br/>`
           }
           if (d.data.name) {
-            tooltipText += `Event Type: ${d.data.name}\n`
+            tooltipText += `Event Type: ${d.data.name}<br/>`
           }
           if (d.value) {
             tooltipText += `Count: ${d.value}`
           }
         } else if (d.depth === 2) {
           if (d.data.name) {
-            tooltipText += `Semantic: ${d.data.name}\n`
+            tooltipText += `Semantic: ${d.data.name}<br/>`
           }
           if (d.value) {
             tooltipText += `Count: ${d.value}`
           }
         }
-        return tooltipText
+
+        tooltip
+          .html(tooltipText)
+          .style('opacity', 1)
+          .style('visibility', 'visible')
+          .style('position', 'fixed')
+          .style('z-index', '9999')
       })
+      .on('mousemove', (event) => {
+        d3.select(tooltipRef.current)
+          .style('left', `${event.pageX + 10}px`)
+          .style('top', `${event.pageY - 30}px`)
+      })
+      .on('mouseout', () => {
+        d3.select(tooltipRef.current).style('opacity', 0)
+      })
+  }, [data])
 
-    /* const legendRectSize = 18
-     const legendSpacing = 4
-
-     const uniqueLegendData = root
-       .descendants()
-       .slice(1)
-       .filter(
-         (d, i, self) =>
-           i ===
-           self.findIndex(
-             (t) => t.data.name === d.data.name && t.data.type === d.data.type
-           )
-       )
-
-     const legend = svg
-       .append('g')
-       .selectAll('.legend')
-       .data(uniqueLegendData)
-       .enter()
-       .append('g')
-       .attr('class', 'legend')
-       .attr('transform', (d, i) => {
-         const height = legendRectSize + legendSpacing
-         const offset = (height * color.domain().length) / 2
-         const horz = radius + 40
-         const vert = i * height - offset
-         return `translate(${horz},${vert})`
-       })
-
-      legend
-       .append('rect')
-       .attr('width', legendRectSize)
-       .attr('height', legendRectSize)
-       .style('fill', (d) => color(d.data.name))
-       .style('stroke', (d) => color(d.data.name))
-
-     legend
-       .append('text')
-       .attr('x', legendRectSize + legendSpacing)
-       .attr('y', legendRectSize - legendSpacing)
-       .text((d) => {
-         let semantic = d.data.name
-         if (d.depth === 2) {
-           if (semantic.length > 10) {
-             semantic = semantic.substring(0, 10) + '...'
-           }
-         } else {
-           semantic = `${semantic} (${d.data.type})`
-         }
-         return semantic
-       })*/
-  }
-
-  return <div id="chart-container"></div>
+  return (
+    <>
+      <svg ref={chartRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={tooltipRef} />
+    </>
+  )
 }
 
 export default PieChart

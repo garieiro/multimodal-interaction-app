@@ -4,9 +4,11 @@ import { sankey as d3Sankey, sankeyLeft, sankeyLinkHorizontal } from 'd3-sankey'
 
 const SankeyChart = ({ data }) => {
   useEffect(() => {
-    const width = 928
-    const height = 600
+    const width = 400
+    const height = 400
     const format = d3.format(',.0f')
+
+    d3.select('#sankey-chart').select('svg').remove()
 
     const svg = d3
       .select('#sankey-chart')
@@ -14,7 +16,7 @@ const SankeyChart = ({ data }) => {
       .attr('width', width)
       .attr('height', height)
       .attr('viewBox', [0, 0, width, height])
-      .attr('style', 'max-width: 100%; height: auto; font: 10px sans-serif;')
+      .attr('style', 'height: auto; font: 10px sans-serif;')
 
     const sankey = d3Sankey()
       .nodeId((d) => d.name)
@@ -31,7 +33,11 @@ const SankeyChart = ({ data }) => {
       links: data.links.map((d) => Object.assign({}, d)),
     })
 
-    const color = d3.scaleOrdinal(d3.schemeCategory10)
+    // Crie uma escala de cores com uma cor única para cada nó
+    const color = d3
+      .scaleOrdinal()
+      .domain(nodes.map((d) => d.name)) // Usar o nome do nó como domínio
+      .range(d3.schemeCategory10) // Gera um conjunto de 10 cores
 
     const rect = svg
       .append('g')
@@ -44,7 +50,7 @@ const SankeyChart = ({ data }) => {
       .attr('y', (d) => d.y0)
       .attr('height', (d) => d.y1 - d.y0)
       .attr('width', (d) => d.x1 - d.x0)
-      .attr('fill', (d) => color(d.category))
+      .attr('fill', (d) => color(d.name)) // Aplica a cor personalizada com base no nome
 
     rect.append('title').text((d) => `${d.name}\n${format(d.value)} TWh`)
 
@@ -61,7 +67,7 @@ const SankeyChart = ({ data }) => {
     link
       .append('path')
       .attr('d', sankeyLinkHorizontal())
-      .attr('stroke', '#000')
+      .attr('stroke', (d) => color(d.source.name)) // Aplica a cor do nó de origem
       .attr('stroke-width', (d) => Math.max(1, d.width))
 
     link
@@ -83,7 +89,16 @@ const SankeyChart = ({ data }) => {
       .text((d) => d.name)
   }, [data])
 
-  return <div id="sankey-chart"></div>
+  return (
+    <div
+      id="sankey-chart"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',
+      }}
+    ></div>
+  )
 }
 
 export default SankeyChart

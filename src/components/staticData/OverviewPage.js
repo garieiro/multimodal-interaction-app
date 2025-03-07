@@ -1,210 +1,142 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react' // Importar useRef
 import '../styles.css'
+import { useLocation } from 'react-router-dom'
+import { Row, Col } from 'reactstrap'
 import ChooseCharts from '../chooseCharts/ChooseCharts'
-import ChooseDataset from '../chooseDataset/ChooseDataset'
+import Sidebar from '../Sidebar/Sidebar'
 
 const OverviewPage = () => {
-  const [boxPlotData, setBoxPlotData] = useState({})
-  const [wordCloudData, setWordCloudData] = useState({})
-  const [timeLineData, setTimeLineData] = useState({})
-  const [sunburstData, setSunburstData] = useState({})
-  const [sunburstLabel, setSunburstLabel] = useState({})
-  const [eventTypeColor, setEventTypeColor] = useState({})
+  const location = useLocation()
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  const [visibleCharts, setVisibleCharts] = useState([])
+  const [colSizes, setColSizes] = useState({ col1: 8, col2: 4 })
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
-  const handleDataReceived = (data) => {
-    console.log('Dados recebidos:', data)
-    setBoxPlotData(data)
-  }
+  const receivedData = location.state?.receivedData || []
+  const datasetName = location.state?.dataset || []
+  const totalUsers = location.state?.totalUsers || []
+  const selectedUsers = location.state?.selectedUsers || []
+  const eventTypeNum = location.state?.eventTypeNum || []
+  const typesNumber = location.state?.typesNumber || []
+  console.log('Data:', receivedData)
+  const firstChartsData = [
+    {
+      title: 'StackedBar',
+      activeLabel: 'StackedBar',
+      data: receivedData,
+      showChart: true,
+    },
+    {
+      title: 'OutputPie',
+      activeLabel: 'OutputPie',
+      data: receivedData,
+      showChart: true,
+    },
+  ]
 
-  const handleWordDataReceived = (data) => {
-    setWordCloudData(data)
-  }
+  const secondChartsData = [
+    {
+      title: 'SunBurst',
+      activeLabel: 'SunBurst',
+      data: receivedData,
+      showChart: true,
+    },
+    {
+      title: 'BoxPlot',
+      activeLabel: 'BoxPlot',
+      data: receivedData,
+      showChart: true,
+    },
+    {
+      title: 'WordCloud',
+      activeLabel: 'WordCloud',
+      data: receivedData,
+      showChart: true,
+    },
+  ]
 
-  const handleTimeLineDataReceived = (data) => {
-    setTimeLineData(data)
-  }
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
 
-  const handleEventTypeColor = (data) => {
-    setEventTypeColor(data)
-  }
+    const handleMouseMove = (e) => {
+      if (e.clientX <= 10) {
+        setIsSidebarOpen(true)
+      }
+    }
 
-  const handleSunburstDataReceived = (data) => {
-    setSunburstData(data)
-  }
+    window.addEventListener('mousemove', handleMouseMove)
 
-  const handleSunburstLabelReceived = (data) => {
-    setSunburstLabel(data)
-  }
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (windowWidth < 900) {
+      setVisibleCharts(secondChartsData.slice(0, 2))
+      setColSizes({ col1: 6, col2: 6 })
+    } else {
+      setVisibleCharts(secondChartsData)
+      setColSizes({ col1: 8, col2: 4 })
+    }
+  }, [windowWidth])
 
   return (
-    <div className="container-fluid" style={{ paddingTop: '20px' }}>
-      <div className="row">
-        <div className="col-md-8">
-          <div
-            className="first-div"
-            style={{
-              padding: '30px',
-              marginBottom: '20px',
-              background: '#4D5859',
-            }}
-          >
-            <ChooseCharts
-              title={'TimeLine'}
-              activeLabel={'TimeLine'}
-              showTimeline
-              boxPlotData={boxPlotData}
-              wordCloudData={wordCloudData}
-              timeLineData={timeLineData}
-              sunburstData={sunburstData}
-              sunburstLabel={sunburstLabel}
-              eventTypeColor={eventTypeColor}
-              onDataReceived={handleDataReceived}
-              onWordDataReceived={handleWordDataReceived}
-              onTimeLineDataReceived={handleTimeLineDataReceived}
-              onEventTypeColor={handleEventTypeColor}
-              onSunburstDataReceived={handleSunburstDataReceived}
-              onSunburstLabelReceived={handleSunburstLabelReceived}
-            />
-          </div>
-        </div>
-        <div
-          className="col-md-4"
-          style={{ display: 'flex', justifyContent: 'flex-end' }}
-        >
-          <div className="flex-column">
-            <div className="d-flex justify-content-between">
-              <div
-                className="first-div"
-                style={{
-                  width: '100%',
-                  height: '100px',
-                  padding: '30px',
-                  marginInline: '10px',
-                  marginBottom: '20px',
-                  background: '#4D5859',
-                }}
-              >
-                <ChooseDataset title={'Your dataset is: '} />
-              </div>
-            </div>
-            <div
-              className="first-div"
-              style={{
-                width: '100%',
-                background: '#4D5859',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                height: '380px',
-                marginTop: '20px',
-              }}
+    <div className="content full-height">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        dataset={datasetName}
+        totalUsers={totalUsers}
+        selectedUsers={selectedUsers}
+      />
+      <Row className="half-height">
+        {firstChartsData.map((chart, index) => {
+          const cardClass =
+            index === 0 ? 'first-card-style-1' : 'first-card-style-2'
+          return (
+            <Col
+              key={index}
+              className={`half-height ${cardClass}`}
+              xs={index === 0 ? colSizes.col1 : colSizes.col2}
             >
-              <h2>
-                Pensar o que poderei colocar aqui! Talvez informação dos
-                participantes!
-              </h2>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        className="row"
-        style={{ display: 'flex', justifyContent: 'center' }}
-      >
-        <div className="col-md-4">
-          <div
-            className="first-div"
-            style={{
-              padding: '30px',
-              marginBottom: '20px',
-              background: '#4D5859',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-            }}
-          >
-            <ChooseCharts
-              title={'SunBurst'}
-              activeLabel={'SunBurst'}
-              showChart
-              boxPlotData={boxPlotData}
-              wordCloudData={wordCloudData}
-              timeLineData={timeLineData}
-              sunburstData={sunburstData}
-              sunburstLabel={sunburstLabel}
-              eventTypeColor={eventTypeColor}
-              onDataReceived={handleDataReceived}
-              onWordDataReceived={handleWordDataReceived}
-              onTimeLineDataReceived={handleTimeLineDataReceived}
-              onEventTypeColor={handleEventTypeColor}
-              onSunburstDataReceived={handleSunburstDataReceived}
-              onSunburstLabelReceived={handleSunburstLabelReceived}
-            />
-          </div>
-        </div>
-        <div className="col-md-4" style={{ height: '640px' }}>
-          <div
-            className="first-div"
-            style={{
-              padding: '30px',
-              marginBottom: '20px',
-              background: '#4D5859',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-            }}
-          >
-            <ChooseCharts
-              title={'BoxPlot'}
-              activeLabel={'BoxPlot'}
-              showChart
-              boxPlotData={boxPlotData}
-              wordCloudData={wordCloudData}
-              timeLineData={timeLineData}
-              sunburstData={sunburstData}
-              sunburstLabel={sunburstLabel}
-              eventTypeColor={eventTypeColor}
-              onDataReceived={handleDataReceived}
-              onWordDataReceived={handleWordDataReceived}
-              onTimeLineDataReceived={handleTimeLineDataReceived}
-              onEventTypeColor={handleEventTypeColor}
-              onSunburstDataReceived={handleSunburstDataReceived}
-              onSunburstLabelReceived={handleSunburstLabelReceived}
-            />
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div
-            className="first-div"
-            style={{
-              padding: '30px',
-              marginBottom: '20px',
-              background: '#4D5859',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-            }}
-          >
-            <ChooseCharts
-              title={'WordCloud'}
-              activeLabel={'WordCloud'}
-              showChart
-              boxPlotData={boxPlotData}
-              wordCloudData={wordCloudData}
-              timeLineData={timeLineData}
-              sunburstData={sunburstData}
-              sunburstLabel={sunburstLabel}
-              eventTypeColor={eventTypeColor}
-              onDataReceived={handleDataReceived}
-              onWordDataReceived={handleWordDataReceived}
-              onTimeLineDataReceived={handleTimeLineDataReceived}
-              onEventTypeColor={handleEventTypeColor}
-              onSunburstDataReceived={handleSunburstDataReceived}
-              onSunburstLabelReceived={handleSunburstLabelReceived}
-            />
-          </div>
-        </div>
-      </div>
+              <ChooseCharts
+                title={chart.title}
+                activeLabel={chart.activeLabel}
+                data={chart.data}
+                showChart={chart.showChart}
+                dataset={datasetName}
+                totalUsers={totalUsers}
+                selectedUsers={selectedUsers}
+                eventTypeNum={eventTypeNum}
+                typesNumber={typesNumber}
+              />
+            </Col>
+          )
+        })}
+      </Row>
+      <Row className="half-height">
+        {visibleCharts.map((chart, index) => {
+          const cardClass = `card-style-${index + 1}`
+          return (
+            <Col key={index} className={`half-height ${cardClass}`}>
+              <ChooseCharts
+                title={chart.title}
+                activeLabel={chart.activeLabel}
+                data={chart.data}
+                showChart={chart.showChart}
+                dataset={datasetName}
+                totalUsers={totalUsers}
+                selectedUsers={selectedUsers}
+                eventTypeNum={eventTypeNum}
+                typesNumber={typesNumber}
+              />
+            </Col>
+          )
+        })}
+      </Row>
     </div>
   )
 }

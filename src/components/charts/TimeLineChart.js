@@ -1,21 +1,15 @@
 import React, { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
 
-const TimelineChart = ({
-  data,
-  handleLabelClick,
-  onDataReceived,
-  onWordDataReceived,
-  onExpDataReceived,
-  eventColor,
-}) => {
+const TimelineChart = ({ data, eventColor }) => {
   const svgRef = useRef()
+  const tooltipRef = useRef()
 
   useEffect(() => {
-    if (data) {
+    if (data && data.length > 0 && tooltipRef) {
       drawTimeline(data)
     }
-  }, [data, eventColor])
+  }, [data, tooltipRef])
 
   const drawTimeline = (data) => {
     const svg = d3.select(svgRef.current)
@@ -28,8 +22,8 @@ const TimelineChart = ({
     const x = d3
       .scaleTime()
       .domain([
-        d3.min(data, (d) => d3.min(d.times, (t) => t.starting_time)),
-        d3.max(data, (d) => d3.max(d.times, (t) => t.ending_time)),
+        d3.min(data, (d) => d3.min(d.times, (t) => new Date(t.starting_time))),
+        d3.max(data, (d) => d3.max(d.times, (t) => new Date(t.ending_time))),
       ])
       .range([0, width])
 
@@ -43,127 +37,121 @@ const TimelineChart = ({
       .append('g')
       .attr('class', 'x-axis')
       .attr('transform', `translate(${margin.left},${height + margin.top})`)
-      .call(d3.axisBottom(x).tickSizeOuter(0))
+      .call(d3.axisBottom(x).ticks(10))
 
-    const yAxis = svg
+    svg
       .append('g')
-      .attr('class', 'y-axis')
       .attr('transform', `translate(${margin.left},${margin.top})`)
-      .call(d3.axisLeft(y).tickSize(0).tickPadding(6))
+      .call(d3.axisLeft(y))
 
-    const barsGroup = svg
+    const eventsGroup = svg
       .append('g')
-      .attr('class', 'bars-group')
       .attr('transform', `translate(${margin.left},${margin.top})`)
-
-    // Define a color scale
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
-
-    const eventsGroup = barsGroup
-      .selectAll('g')
-      .data(data)
-      .join('g')
-      .attr('class', 'event-group')
-      .selectAll('rect')
-      .data((d) => d.times)
-      .join('rect')
-      .attr('class', 'event-rect')
-      .attr('x', (d) => x(d.starting_time))
-      .attr('y', (d) => y(data.find((p) => p.times.includes(d)).label))
-      .attr('width', (d) => x(d.ending_time) - x(d.starting_time))
-      .attr('height', y.bandwidth())
-      .attr('fill', (d, i) => {
-        if (eventColor.length > 0) {
-          let color = '#636363'
-          data.forEach((event) => {
-            event.times.forEach((time) => {
-              if (time === d && event.type === eventColor) {
-                color = colorScale(i)
-              }
-            })
-          })
-          return color
-        } else {
-          return colorScale(i)
-        }
-      })
-
-    yAxis.selectAll('text').remove()
-
-    yAxis
-      .selectAll('foreignObject')
+      .selectAll('g.event-group')
       .data(data)
       .enter()
-      .append('foreignObject')
-      .attr('x', -margin.left)
-      .attr('y', (d) => y(d.label))
-      .attr('width', margin.left - 10)
-      .attr('height', y.bandwidth())
-      .append('xhtml:div')
-      .html(
-        (d) =>
-          `<button class="btn btn-dark d-flex align-items-center justify-content-center" style="width:100%; height:${y.bandwidth()}px; padding-top:10px; padding-bottom:10px;">${d.label}</button>`
+      .append('g')
+      .attr('class', 'event-group')
+      .attr('transform', (d) => `translate(0, ${y(d.label)})`)
+
+    const tooltip = d3
+      .select(tooltipRef.current)
+      .style('opacity', 0)
+      .style('position', 'absolute')
+      .style('pointer-events', 'none')
+      .style('background', 'rgba(0,0,0,0.9)')
+      .style('border', '1px solid black')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('font-size', '12px')
+      .style('z-index', '10')
+
+    eventsGroup
+      .selectAll('rect')
+      .data((d) => d.times)
+      .enter()
+      .append('rect')
+      .attr('class', 'event-rect')
+      .attr('x', (d) => x(new Date(d.starting_time)))
+      .attr('y', 0)
+      .attr('width', (d) =>
+        Math.max(0, x(new Date(d.ending_time)) - x(new Date(d.starting_time)))
       )
+      .attr('height', y.bandwidth())
+      .attr('fill', (d, i) =>
+        eventColor ? eventColor : d3.schemeCategory10[i % 10]
+      )
+      .on('mouseover', function (event, d) {
+        console.log('Tooltip triggered')
 
-      .on('click', (event, d) => {
-        handleLabelClick(d.label)
-        const expName = d.label
-        const expIndex = parseInt(expName.match(/\d+/)[0]) - 1
+        const startTime = new Date(d.starting_time)
+        const endTime = new Date(d.ending_time)
+        const durationInMs = endTime - startTime
 
-        if (!isNaN(expIndex)) {
-          fetch(`http://127.0.0.1:5000/events/expDurations?exp=${expIndex}`)
-            .then((response) => response.json())
-            .then((receivedData) => {
-              onDataReceived(receivedData)
-            })
-            .catch((error) => {
-              console.error('Erro ao fazer solicitação à API:', error)
-            })
+        const durationInSeconds = Math.floor(durationInMs / 1000)
+        const hours = Math.floor(durationInSeconds / 3600)
+        const minutes = Math.floor((durationInSeconds % 3600) / 60)
+        const seconds = durationInSeconds % 60
 
-          fetch(`http://127.0.0.1:5000/events/words?exp=${expIndex}`)
-            .then((response) => response.json())
-            .then((wordsData) => {
-              onWordDataReceived(wordsData)
-            })
-            .catch((error) => {
-              console.error('Erro ao fagzer solicitação à API:', error)
-            })
+        tooltip
+          .html(
+            `Start: ${startTime.toLocaleString()}<br/>End: ${endTime.toLocaleString()}<br/>Duration: ${hours}h ${minutes}m ${seconds}s`
+          )
+          .style('opacity', 1)
+          .style('visibility', 'visible')
+          .style('position', 'fixed')
+          .style('left', '50px')
+          .style('top', '50px')
+          .style('z-index', '9999')
+      })
+      .on('mouseout', function () {
+        tooltip.style('opacity', 0).style('visibility', 'hidden')
+      })
 
-          fetch(`http://127.0.0.1:5000/events/exps`)
-            .then((response) => response.json())
-            .then((expData) => {
-              onExpDataReceived(expData)
-            })
-            .catch((error) => {
-              console.error('Erro ao fazer solicitação à API:', error)
-            })
-        }
+      .on('mousemove', (event) => {
+        tooltip
+          .style('left', `${event.pageX + 10}px`)
+          .style('top', `${event.pageY - 30}px`)
+      })
+      .on('mouseout', () => {
+        tooltip.style('opacity', 0)
       })
 
     const zoomBehavior = d3
       .zoom()
-      .scaleExtent([1, 10])
-      .translateExtent([
-        [0, 0],
-        [width, height],
-      ])
-      .extent([
-        [0, 0],
-        [width, height],
-      ])
+      .scaleExtent([-10, 20])
       .on('zoom', (event) => {
         const newX = event.transform.rescaleX(x)
-        xAxis.call(d3.axisBottom(newX).tickSizeOuter(0))
+
+        xAxis.call(d3.axisBottom(newX).ticks(10))
 
         eventsGroup
-          .attr('x', (d) => newX(d.starting_time))
-          .attr('width', (d) => newX(d.ending_time) - newX(d.starting_time))
+          .selectAll('rect')
+          .attr('x', (d) => newX(new Date(d.starting_time)))
+          .attr('width', (d) =>
+            Math.max(
+              0,
+              newX(new Date(d.ending_time)) - newX(new Date(d.starting_time))
+            )
+          )
       })
 
-    svg.call(zoomBehavior)
+    const initialZoom = d3.zoomIdentity
+      .scale(10)
+      .translate(
+        -x(d3.min(data, (d) => d3.min(d.times, (t) => t.starting_time))) * 2,
+        0
+      )
+
+    svg.call(zoomBehavior).call(zoomBehavior.transform, initialZoom)
   }
 
-  return <svg ref={svgRef} width={1300} height={400}></svg>
+  return (
+    <>
+      <svg ref={svgRef} width={1300} height={400}></svg>
+      <div ref={tooltipRef} />
+    </>
+  )
 }
 
 export default TimelineChart

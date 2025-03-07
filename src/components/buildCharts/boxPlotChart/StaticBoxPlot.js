@@ -1,35 +1,14 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import BoxPlot from '../../charts/BoxPlot'
-import { fetchBoxPlotFromAPI } from '../../../api/StaticData'
+import transformDataToBoxplot from '../../../TransformDate/transformDataToBoxplot'
 
 const StaticBoxPlot = ({ data }) => {
-  const [boxPlotData, setBoxPlotData] = useState([])
-  const [dataLoaded, setDataLoaded] = useState(false)
-
-  useEffect(() => {
-    const fetchWordCloud = async () => {
-      try {
-        let fetchedBoxPlotData = []
-        if (data) {
-          console.log('DataBox:', data)
-          fetchedBoxPlotData = data
-        } else {
-          fetchedBoxPlotData = await fetchBoxPlotFromAPI()
-          console.log('DataBox:', fetchedBoxPlotData)
-        }
-        setBoxPlotData(fetchedBoxPlotData)
-        setDataLoaded(true)
-      } catch (error) {
-        console.error('Error fetching BoxPlot data:', error)
-      }
-    }
-
-    fetchWordCloud().catch((error) =>
-      console.error('Error fetching BoxPlot data:', error)
-    )
-  }, [data])
-
-  return dataLoaded && <BoxPlot data={boxPlotData} />
+  const transformedData = React.useMemo(
+    () => transformDataToBoxplot(data),
+    [data]
+  )
+  console.log('Box:', transformedData)
+  return <BoxPlot data={transformedData} />
 }
 
 export default StaticBoxPlot

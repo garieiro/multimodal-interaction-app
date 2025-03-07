@@ -3,16 +3,15 @@ import * as d3 from 'd3'
 
 const BoxPlot = ({ data }) => {
   const svgRef = useRef()
-  console.log('BoxPlot', data)
+
   useEffect(() => {
     d3.select(svgRef.current).selectAll('*').remove()
 
     if (!data || data.length === 0) {
-      return <div>No data available</div>
+      return
     }
 
     const margin = { top: 10, right: 30, bottom: 50, left: 40 }
-    const width = 450 - margin.left - margin.right
     const height = 450 - margin.top - margin.bottom
 
     const boxWidth = 70
@@ -21,15 +20,22 @@ const BoxPlot = ({ data }) => {
 
     const minValues = data.map((dataset) => d3.min(dataset.values))
     const maxValues = data.map((dataset) => d3.max(dataset.values))
-    const minAll = d3.min(minValues)
-    const maxAll = d3.max(maxValues)
+    const minAll = d3.min(minValues) - 2
+    const maxAll = d3.max(maxValues) + 2
 
     const y = d3.scaleLinear().domain([minAll, maxAll]).range([height, 0])
 
     const svg = d3
       .select(svgRef.current)
-      .attr('width', totalWidth + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr(
+        'viewBox',
+        `0 0 ${totalWidth + margin.left + margin.right} ${height + margin.top + margin.bottom}`
+      )
+      .style('font', '10px sans-serif')
+
+    const g = svg
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`)
 
@@ -41,20 +47,19 @@ const BoxPlot = ({ data }) => {
       const median = d3.quantile(data_sorted, 0.5)
       const q3 = d3.quantile(data_sorted, 0.75)
       const interQuantileRange = q3 - q1
-      const min = Math.min(maxAll, q3 + interQuantileRange * 1.5)
-      const max = Math.max(minAll, q1 - interQuantileRange * 1.5)
+
+      const min = Math.max(0, q1 - interQuantileRange * 1.5)
+      const max = Math.min(maxAll, q3 + interQuantileRange * 1.5)
       const x = index * datasetWidth + datasetWidth / 2
 
-      svg
-        .append('line')
+      g.append('line')
         .attr('x1', x)
         .attr('x2', x)
         .attr('y1', y(min))
         .attr('y2', y(max))
         .attr('stroke', 'black')
 
-      svg
-        .append('rect')
+      g.append('rect')
         .attr('x', x - boxWidth / 2)
         .attr('y', y(q3))
         .attr('height', y(q1) - y(q3))
@@ -62,8 +67,7 @@ const BoxPlot = ({ data }) => {
         .attr('stroke', 'black')
         .style('fill', '#69b3a2')
 
-      svg
-        .selectAll('line.toto')
+      g.selectAll('line.toto')
         .data([min, median, max])
         .enter()
         .append('line')
@@ -72,21 +76,29 @@ const BoxPlot = ({ data }) => {
         .attr('y1', (d) => y(d))
         .attr('y2', (d) => y(d))
         .attr('stroke', 'black')
-
-      svg
-        .append('text')
-        .attr('x', x)
-        .attr('y', height + margin.bottom / 2)
-        .attr('text-anchor', 'middle')
-        .text(dataset.label)
-        .style('font-size', '12px')
-        .attr('fill', 'black')
     })
 
-    svg.append('g').attr('class', 'y-axis').call(d3.axisLeft(y))
+    // Eixo Y
+    g.append('g').attr('class', 'y-axis').call(d3.axisLeft(y))
+
+    // Eixo X
+    const xAxis = d3.axisBottom(
+      d3
+        .scaleBand()
+        .domain(data.map((d) => d.label))
+        .range([0, totalWidth])
+        .padding(0.1)
+    )
+    g.append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', `translate(0, ${height})`)
+      .call(xAxis)
+
+    // Mudar a cor da label do eixo X
+    g.selectAll('.x-axis text').style('fill', 'burlywood')
   }, [data])
 
-  return <svg ref={svgRef}></svg>
+  return <svg ref={svgRef} style={{ width: '100%', height: '100%' }} />
 }
 
 export default BoxPlot
